@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from typing import List
 
-from duckduckgo_search import DDGS  # ddgs package
+from ddgs import DDGS
 from tavily import TavilyClient
 
 from raccoon.config import settings
