@@ -54,6 +54,4 @@ raccoon/
   keywords.py                   Keyword and technology libraries
   pipeline.py                   Orchestrator - runs nodes 1-6
   slack_formatter.py            Slack Block Kit formatter
-hermes/
-  signal-raccoon.md             Hermes skill wrapper
-```
+|```
