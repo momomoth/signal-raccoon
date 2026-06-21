@@ -1,0 +1,10 @@
+.venv/
+.env
+ARCHITECTURE.md
+docs/
+hermes/
+__pycache__/
+*.pyc
+*.egg-info/
+.DS_Store
+*.excalidraw

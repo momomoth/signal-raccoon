@@ -1,0 +1,26 @@
+[project]
+name = "bright-sunshine"
+version = "0.1.0"
+description = "Signal Raccoon — buyer intent pipeline for SSPM GTM"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn>=0.34",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+    "python-dotenv>=1.0",
+    "httpx>=0.28",
+    "beautifulsoup4>=4.12",
+    "html2text>=2024.0",
+    "langchain>=0.3",
+    "langchain-community>=0.3",
+    "langchain-deepseek>=0.1",
+    "ddgs>=8.0",
+    "tavily-python>=0.5",
+    "slowapi>=0.1.9",
+]
+
+[tool.setuptools]
+py-modules = ["app"]
+packages = ["raccoon"]
+
