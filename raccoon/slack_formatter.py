@@ -184,7 +184,12 @@ def build_slack_blocks(report: ConsolidatedReport) -> List[dict]:
     })
 
     # 6. Footer context
-    firmo_display = f"{report.firmographic_score}/100" if report.firmographic_score > 0 else "N/A"
+    firmo_composite = (
+        report.firmographic_profile.composite_score
+        if report.firmographic_profile and report.firmographic_profile.data_quality != "missing"
+        else 0
+    )
+    firmo_display = f"{firmo_composite}/100" if firmo_composite > 0 else "N/A"
     footer_parts = [f"{report.articles_considered} articles", f"firmo fit: {firmo_display}", report.outreach_stance]
     footer_text = " · ".join(footer_parts)
 
