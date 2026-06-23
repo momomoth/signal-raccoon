@@ -111,6 +111,58 @@ async def analyze_intent_endpoint(
     return await run_intent_pipeline(normalized)
 
 
+# Common TLDs that indicate a URL-without-scheme (e.g. "cursor.com").
+# Multi-word TLDs (.co.uk, .com.au) handled by the path-bearing URL branch.
+_URL_TLDS = {
+    "com", "org", "io", "ai", "co", "net", "dev", "cloud", "app",
+    "xyz", "tech", "so", "gg", "sh", "site", "page",
+}
+
+
+def _looks_like_url(token: str) -> bool:
+    """True if a token looks URL-ish (scheme, domain, or LinkedIn path)."""
+    if not token:
+        return False
+    lower = token.lower()
+    if lower.startswith(("http://", "https://")):
+        return True
+    if "linkedin.com" in lower:
+        return True
+    # Bare domain like "cursor.com" or "reco.ai" — check the TLD.
+    if "." in lower and "/" not in lower.split(".")[0]:
+        tld = lower.rsplit(".", 1)[-1]
+        return tld in _URL_TLDS
+    # Path-bearing URL without scheme, e.g. "linkedin.com/company/acme".
+    if "/" in lower and "." in lower.split("/", 1)[0]:
+        return True
+    return False
+
+
+def _parse_slack_text(text: str) -> tuple[str, str]:
+    """Parse Slack slash-command text into (company, url).
+
+    Scans tokens right-to-left for the first URL-looking token. Everything
+    before it (joined with spaces) is the company name; that token is the URL.
+    If the URL is the only token, the URL itself is also used as the company
+    name — Apollo enrichment will resolve the real name from the domain.
+
+    Returns ("", "") if no URL-like token is found.
+    """
+    tokens = text.split()
+    if not tokens:
+        return "", ""
+    url_idx = None
+    for i in range(len(tokens) - 1, -1, -1):
+        if _looks_like_url(tokens[i]):
+            url_idx = i
+            break
+    if url_idx is None:
+        return "", ""
+    url = tokens[url_idx]
+    company = " ".join(tokens[:url_idx]) if url_idx > 0 else url
+    return company, url
+
+
 @app.post("/slack/deep-dive")
 @limiter.limit("5/minute")
 async def slack_deep_dive(
@@ -139,8 +191,8 @@ async def slack_deep_dive(
     response_url = (parsed.get("response_url", [""])[0]).strip()
     user_id = (parsed.get("user_id", ["unknown"])[0]).strip()
 
-    parts = text.split(maxsplit=1)
-    if len(parts) < 2:
+    company, url = _parse_slack_text(text)
+    if not url:
         return {
             "response_type": "ephemeral",
             "text": (
@@ -149,9 +201,6 @@ async def slack_deep_dive(
                 "Example: `/deep-dive Acme linkedin.com/company/acme`"
             ),
         }
-
-    company = parts[0].strip()
-    url = parts[1].strip()
 
     if "linkedin.com" in url.lower():
         company_input = CompanyInput(company=company, website="", linkedin=url)

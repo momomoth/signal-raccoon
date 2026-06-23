@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_deepseek import ChatDeepSeek
@@ -141,7 +141,9 @@ async def analyze_intent(
     safe_summary = sanitize_text(summary, max_length=3000)
     safe_articles = sanitize_text(articles_text, max_length=20000)
 
-    llm = ChatDeepSeek(model="deepseek-chat", temperature=0, api_key=settings.deepseek_api_key)
+    llm = ChatDeepSeek(
+        model="deepseek-chat", temperature=0, api_key=settings.deepseek_api_key
+    )
     prompt = ChatPromptTemplate.from_template(INTENT_PROMPT)
 
     structured_llm = llm.with_structured_output(_IntentAnalysis)

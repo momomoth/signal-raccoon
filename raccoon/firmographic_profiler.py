@@ -74,25 +74,25 @@ def _score_category(
 def _score_sensitivity(keywords: List[str]) -> CategoryScore:
     has_data = len(keywords) > 0
     matched = _match_keywords(keywords, SENSITIVITY_KEYWORDS) if has_data else []
-    return _score_category("data_sensitivity", len(matched), 1, matched, 1.0, has_data)
+    return _score_category("data_sensitivity", len(matched), 2, matched, 1.0, has_data)
 
 
 def _score_infrastructure(technologies: list) -> CategoryScore:
     has_data = len(technologies) > 0
     matched = _match_techs(technologies, INFRASTRUCTURE_TECHS) if has_data else []
-    return _score_category("infrastructure_scale", len(matched), 1, matched, 1.0, has_data)
+    return _score_category("infrastructure_scale", len(matched), 2, matched, 1.0, has_data)
 
 
 def _score_ai_stack(technologies: list) -> CategoryScore:
     has_data = len(technologies) > 0
     matched = _match_techs(technologies, AI_STACK_TECHS) if has_data else []
-    return _score_category("ai_stack_presence", len(matched), 1, matched, 1.0, has_data)
+    return _score_category("ai_stack_presence", len(matched), 3, matched, 1.0, has_data)
 
 
 def _score_security_maturity(technologies: list) -> CategoryScore:
     has_data = len(technologies) > 0
     matched = _match_techs(technologies, SECURITY_TECHS) if has_data else []
-    return _score_category("security_maturity", len(matched), 1, matched, 1.0, has_data)
+    return _score_category("security_maturity", len(matched), 2, matched, 1.0, has_data)
 
 
 def _score_exposure_ratio(dept_headcount: dict) -> CategoryScore:

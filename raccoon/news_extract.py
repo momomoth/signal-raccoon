@@ -1,3 +1,4 @@
+import asyncio
 import re
 from typing import List, Optional
 
@@ -13,6 +14,12 @@ USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
     "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
+
+# Overall wall-clock cap for the whole extraction batch. Bounded by the
+# product's "30 seconds from send" promise: an article still in flight when
+# this fires is cancelled, but anything already extracted is kept and returned
+# downstream so the pipeline can continue with partial data rather than stalling.
+_NODE_TIMEOUT_SECONDS = 30.0
 
 
 def _attr_str(element, name: str) -> Optional[str]:
@@ -63,7 +70,7 @@ async def _extract_parallel(url: str, fallback_date: Optional[str] = None) -> Op
         return None
 
     try:
-        async with httpx.AsyncClient(timeout=45.0) as client:
+        async with httpx.AsyncClient(timeout=20.0) as client:
             response = await client.post(
                 settings.parallel_api_url,
                 headers={"Authorization": f"Bearer {settings.parallel_api_key}"},
@@ -144,10 +151,35 @@ async def extract_article(result: NewsSearchResult) -> Optional[Article]:
 
 
 async def extract_articles(results: List[NewsSearchResult], max_articles: int = 10) -> List[Article]:
-    """Node 4 — scrape a list of news URLs and return cleaned article texts."""
+    """Node 4 — scrape a list of news URLs and return cleaned article texts.
+
+    All fetches run concurrently and are bounded to _NODE_TIMEOUT_SECONDS wall
+    time via asyncio.wait. Articles that finish before the cap are returned in
+    input order; stragglers are cancelled so the pipeline can continue with
+    partial data rather than stalling the 30-second budget.
+    """
+    tasks = [asyncio.ensure_future(extract_article(result)) for result in results[:max_articles]]
+    if not tasks:
+        return []
+
+    done, pending = await asyncio.wait(tasks, timeout=_NODE_TIMEOUT_SECONDS)
+
+    for task in pending:
+        task.cancel()
+    for task in pending:
+        try:
+            await task
+        except (asyncio.CancelledError, Exception):
+            pass
+
     articles: List[Article] = []
-    for result in results[:max_articles]:
-        article = await extract_article(result)
-        if article:
-            articles.append(article)
+    for task in tasks:
+        if task not in done:
+            continue
+        try:
+            outcome = task.result()
+        except Exception:
+            continue
+        if isinstance(outcome, Article):
+            articles.append(outcome)
     return articles
